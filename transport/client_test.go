@@ -1,8 +1,6 @@
 package transport
 
 import (
-	"fmt"
-	"log"
 	"net"
 	"testing"
 	"time"
@@ -11,25 +9,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttputil"
 )
-
-func TestNodeClient(t *testing.T) {
-	const (
-		host      = "127.0.0.1:50000"
-		useragent = "test-client"
-	)
-
-	client := NewNodeClient(host, useragent)
-
-	body := fmt.Sprintf(`[{"message": "test message", "time": %d}]`, time.Now().UnixNano())
-
-	code, err := client.BulkRequest([]byte(body), time.Second)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	log.Println(code)
-}
 
 func TestNodeClient_BulkRequest(t *testing.T) {
 	const (
