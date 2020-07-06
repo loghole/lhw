@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"go.uber.org/zap"
@@ -12,8 +13,9 @@ import (
 func main() {
 	// init writer
 	writer, err := lhw.NewWriter(lhw.Config{
-		NodeURIs:    []string{"127.0.0.1:50000"},
-		DropStorage: true,
+		NodeURIs: []string{"https://127.0.0.1:50000"},
+		Insecure: true,
+		Logger:   log.New(os.Stdout, "", log.Ldate),
 	})
 	if err != nil {
 		panic(err)

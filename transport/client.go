@@ -1,104 +1,84 @@
 package transport
 
 import (
+	"bytes"
+	"context"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
-
-	"github.com/valyala/fasthttp"
 )
 
 const (
-	isDead uint32 = iota
+	isDead int32 = iota
 	isLive
 )
 
 const (
-	contentType   = "application/json"
-	storeBatchURI = "/api/v1/store/list"
+	storeBatchURI = "/api/v1/store"
 	pingServerURI = "/api/v1/ping"
 )
 
-const (
-	MaxIdleConnDuration = 5 * time.Second
-)
-
 type NodeClient struct {
-	host      string
-	useragent string
+	host string
 
-	status      uint32
+	status      int32
+	pendingReq  int32
 	lastUseTime int64
 
-	client fasthttp.HostClient
+	client http.Client
 }
 
 // NewNodeClient create elastic node client with small api.
-func NewNodeClient(url, useragent string) *NodeClient {
-	url = strings.TrimPrefix(url, "http://")
-	url = strings.TrimPrefix(url, "https://")
-
+func NewNodeClient(url string, transport *http.Transport) *NodeClient {
 	client := &NodeClient{
-		host:      url,
-		useragent: useragent,
-		status:    isLive,
-		client: fasthttp.HostClient{
-			Addr:                url,
-			MaxIdleConnDuration: MaxIdleConnDuration,
-		},
+		host:   url,
+		status: isLive,
+		client: http.Client{Transport: transport},
 	}
 
 	return client
 }
 
-func (c *NodeClient) BulkRequest(body []byte, timeout time.Duration) (code int, err error) {
-	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
-
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-
-	req.Header.SetMethod(fasthttp.MethodPost)
-	req.Header.SetUserAgent(c.useragent)
-	req.Header.SetContentType(contentType)
-	req.Header.SetRequestURI(storeBatchURI)
-	req.Header.SetHost(c.host)
-
-	req.SetBody(body)
-
-	atomic.StoreInt64(&c.lastUseTime, time.Now().UnixNano())
-
-	err = c.client.DoTimeout(req, resp, timeout)
-
-	return resp.StatusCode(), err
+func (c *NodeClient) SendRequest(body []byte, timeout time.Duration) (code int, err error) {
+	return c.do(storeBatchURI, body, timeout)
 }
 
 // Ping request allows to check connection status.
 func (c *NodeClient) PingRequest(timeout time.Duration) (code int, err error) {
-	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
-
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-
-	req.Header.SetMethod(fasthttp.MethodPost)
-	req.Header.SetUserAgent(c.useragent)
-	req.Header.SetRequestURI(pingServerURI)
-	req.Header.SetHost(c.host)
-
-	atomic.StoreInt64(&c.lastUseTime, time.Now().UnixNano())
-
-	err = c.client.DoTimeout(req, resp, timeout)
-
-	return resp.StatusCode(), err
+	return c.do(pingServerURI, nil, timeout)
 }
 
-// PendingRequests returns all pending request of node client.
-func (c *NodeClient) PendingRequests() int {
-	return c.client.PendingRequests()
+// ActiveRequests returns all active request of node client.
+func (c *NodeClient) ActiveRequests() int {
+	return int(atomic.LoadInt32(&c.pendingReq))
 }
 
 // LastUseTime returns time of last started request.
 func (c *NodeClient) LastUseTime() int {
 	return int(atomic.LoadInt64(&c.lastUseTime))
+}
+
+func (c *NodeClient) do(uri string, body []byte, timeout time.Duration) (code int, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	atomic.AddInt32(&c.pendingReq, 1)
+	defer atomic.AddInt32(&c.pendingReq, -1)
+
+	url := strings.Join([]string{c.host, uri}, "")
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
+	if err != nil {
+		return 0, err
+	}
+
+	atomic.StoreInt64(&c.lastUseTime, time.Now().UnixNano())
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+
+	return resp.StatusCode, err
 }

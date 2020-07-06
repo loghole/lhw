@@ -4,27 +4,25 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/valyala/fasthttp"
-
 	"github.com/gadavy/lhw/internal"
 )
 
 type Transport interface {
-	SendBulk(body []byte) error
+	Send(body []byte) error
 	IsConnected() bool
 	IsReconnected() <-chan struct{}
 }
 
 type Config struct {
 	NodeURIs       []string
+	Insecure       bool
 	RequestTimeout time.Duration
 	PingInterval   time.Duration
 	SuccessCodes   []int
-	UserAgent      string
 }
 
 type httpTransport struct {
-	connStatus  uint32
+	connStatus  int32
 	clientsPool ClientsPool
 
 	requestTimeout time.Duration
@@ -36,7 +34,7 @@ type httpTransport struct {
 }
 
 func New(cfg Config) (Transport, error) {
-	pool, err := NewClientsPool(cfg.NodeURIs, cfg.UserAgent)
+	pool, err := NewClientsPool(cfg.NodeURIs, cfg.Insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +60,14 @@ func New(cfg Config) (Transport, error) {
 }
 
 func (t *httpTransport) IsConnected() (ok bool) {
-	return atomic.LoadUint32(&t.connStatus) == isLive
+	return atomic.LoadInt32(&t.connStatus) == isLive
 }
 
 func (t *httpTransport) IsReconnected() <-chan struct{} {
 	return t.liveSignal
 }
 
-func (t *httpTransport) SendBulk(body []byte) error {
+func (t *httpTransport) Send(body []byte) error {
 	var (
 		client *NodeClient
 		code   int
@@ -79,22 +77,20 @@ func (t *httpTransport) SendBulk(body []byte) error {
 	for {
 		client, err = t.clientsPool.NextLive()
 		if err != nil {
-			atomic.StoreUint32(&t.connStatus, isDead)
+			atomic.StoreInt32(&t.connStatus, isDead)
 
 			t.deadSignal.Send()
 
 			return err
 		}
 
-		code, err = client.BulkRequest(body, t.requestTimeout)
+		code, err = client.SendRequest(body, t.requestTimeout)
 		if err == nil && t.successCodes[code] {
 			return nil
 		}
 
-		if err != fasthttp.ErrNoFreeConns {
-			t.clientsPool.OnFailure(client)
-			t.deadSignal.Send()
-		}
+		t.clientsPool.OnFailure(client)
+		t.deadSignal.Send()
 	}
 }
 
@@ -116,7 +112,7 @@ func (t *httpTransport) pingDeadNodes() {
 		if err == nil && t.successCodes[code] {
 			t.clientsPool.OnSuccess(client)
 
-			atomic.StoreUint32(&t.connStatus, isLive)
+			atomic.StoreInt32(&t.connStatus, isLive)
 
 			t.liveSignal.Send()
 		}

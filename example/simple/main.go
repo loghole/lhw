@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/gadavy/lhw"
@@ -9,8 +11,9 @@ import (
 
 func main() {
 	writer, err := lhw.NewWriter(lhw.Config{
-		NodeURIs:    []string{"127.0.0.1:50000"},
-		DropStorage: true,
+		NodeURIs: []string{"https://127.0.0.1:50000"},
+		Insecure: true,
+		Logger:   log.New(os.Stdout, "", log.Ldate),
 	})
 	if err != nil {
 		panic(err)

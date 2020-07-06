@@ -28,32 +28,6 @@ func (m *MockTransport) IsReconnected() <-chan struct{} {
 	return m.Called().Get(0).(<-chan struct{})
 }
 
-type MockStorage struct {
-	mock.Mock
-
-	isUsedCounter int
-}
-
-func (m *MockStorage) Put(data []byte) error {
-	return m.Called(data).Error(0)
-}
-
-func (m *MockStorage) Pop() ([]byte, error) {
-	args := m.Called()
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-func (m *MockStorage) Drop() error {
-	return m.Called().Error(0)
-}
-
-func (m *MockStorage) IsUsed() (ok bool) {
-	ok = m.Called().Bool(0 + m.isUsedCounter)
-	m.isUsedCounter++
-
-	return ok
-}
-
 type MockLogger struct {
 	mock.Mock
 }

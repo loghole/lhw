@@ -37,7 +37,7 @@ func TestNewClientsPool(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pool, err := NewClientsPool(tt.urls, "")
+			pool, err := NewClientsPool(tt.urls, true)
 			if (err != nil) != tt.wantErr {
 				t.Error(err)
 			}
@@ -159,7 +159,7 @@ func BenchmarkClusterPool_NextLive(b *testing.B) {
 			"http://127.0.0.1:9208",
 			"http://127.0.0.1:9209",
 		},
-		"test-user-agent",
+		true,
 	)
 	if err != nil {
 		b.Fatal(err)
