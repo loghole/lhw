@@ -13,7 +13,7 @@ type MockTransport struct {
 	isConnectedCounter int
 }
 
-func (m *MockTransport) SendBulk(body []byte) error {
+func (m *MockTransport) Send(body []byte) error {
 	return m.Called(body).Error(0)
 }
 

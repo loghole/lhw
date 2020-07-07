@@ -15,43 +15,43 @@ const (
 )
 
 const (
-	storeBatchURI = "/api/v1/store"
-	pingServerURI = "/api/v1/ping"
+	storeURI = "/api/v1/store"
+	pingURI  = "/api/v1/ping"
 )
 
 type NodeClient struct {
 	host string
 
 	status      int32
-	pendingReq  int32
+	activeReq   int32
 	lastUseTime int64
 
-	client http.Client
+	client *http.Client
 }
 
-// NewNodeClient create elastic node client with small api.
+// NewNodeClient create log hole node client.
 func NewNodeClient(url string, transport *http.Transport) *NodeClient {
 	client := &NodeClient{
 		host:   url,
 		status: isLive,
-		client: http.Client{Transport: transport},
+		client: &http.Client{Transport: transport},
 	}
 
 	return client
 }
 
 func (c *NodeClient) SendRequest(body []byte, timeout time.Duration) (code int, err error) {
-	return c.do(storeBatchURI, body, timeout)
+	return c.do(storeURI, body, timeout)
 }
 
 // Ping request allows to check connection status.
 func (c *NodeClient) PingRequest(timeout time.Duration) (code int, err error) {
-	return c.do(pingServerURI, nil, timeout)
+	return c.do(pingURI, nil, timeout)
 }
 
 // ActiveRequests returns all active request of node client.
 func (c *NodeClient) ActiveRequests() int {
-	return int(atomic.LoadInt32(&c.pendingReq))
+	return int(atomic.LoadInt32(&c.activeReq))
 }
 
 // LastUseTime returns time of last started request.
@@ -63,8 +63,8 @@ func (c *NodeClient) do(uri string, body []byte, timeout time.Duration) (code in
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	atomic.AddInt32(&c.pendingReq, 1)
-	defer atomic.AddInt32(&c.pendingReq, -1)
+	atomic.AddInt32(&c.activeReq, 1)
+	defer atomic.AddInt32(&c.activeReq, -1)
 
 	url := strings.Join([]string{c.host, uri}, "")
 
@@ -77,6 +77,10 @@ func (c *NodeClient) do(uri string, body []byte, timeout time.Duration) (code in
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		return 0, err
+	}
+
+	if err := resp.Body.Close(); err != nil {
 		return 0, err
 	}
 

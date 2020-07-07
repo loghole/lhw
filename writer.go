@@ -29,13 +29,11 @@ func NewWriter(config Config) (writer *Writer, err error) {
 }
 
 type Writer struct {
-	noCopy noCopy // nolint:unused,structcheck
-
 	transport transport.Transport
-	queue     chan []byte
 
-	wg     sync.WaitGroup
+	queue  chan []byte
 	logger Logger
+	wg     sync.WaitGroup
 }
 
 func (w *Writer) Write(p []byte) (n int, err error) {
@@ -54,6 +52,7 @@ func (w *Writer) Sync() error {
 func (w *Writer) Close() error {
 	close(w.queue)
 	w.wg.Wait()
+
 	return nil
 }
 
