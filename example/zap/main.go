@@ -26,7 +26,7 @@ func main() {
 	// init logger
 	logger := zap.New(zapcore.NewCore(
 		getEncoder(),
-		zapcore.NewMultiWriteSyncer(writer, os.Stdout),
+		zapcore.NewMultiWriteSyncer(zapcore.AddSync(writer), os.Stdout),
 		zapcore.DebugLevel)).Sugar()
 
 	// init logger fields

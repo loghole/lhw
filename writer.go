@@ -45,10 +45,6 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	}
 }
 
-func (w *Writer) Sync() error {
-	return nil
-}
-
 func (w *Writer) Close() error {
 	close(w.queue)
 	w.wg.Wait()
