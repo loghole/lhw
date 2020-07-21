@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -62,8 +63,12 @@ func getEncoder() zapcore.Encoder {
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.EpochNanosTimeEncoder,
+		EncodeTime:     RFC3339NanoTimeEncoder,
 		EncodeDuration: zapcore.NanosDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	})
+}
+
+func RFC3339NanoTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format(time.RFC3339Nano))
 }
