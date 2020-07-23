@@ -7,10 +7,15 @@ import (
 	"github.com/gadavy/lhw/transport"
 )
 
-var ErrWriteFailed = errors.New("write data to queue failed")
+var (
+	ErrWriteFailed = errors.New("write data to queue failed")
+)
 
-func NewWriter(config Config) (writer *Writer, err error) {
-	config.validate()
+func NewWriter(options ...Option) (writer *Writer, err error) {
+	config, err := buildWriterConfig(options...)
+	if err != nil {
+		return nil, err
+	}
 
 	writer = &Writer{
 		logger: config.Logger,
