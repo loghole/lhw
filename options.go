@@ -69,7 +69,7 @@ func WithPingInterval(interval time.Duration) Option {
 	}
 }
 
-func WithSuccessCodes(codes []int) Option {
+func WithSuccessCodes(codes ...int) Option {
 	return func(cfg *writerConfig) {
 		cfg.SuccessCodes = codes
 	}
@@ -122,7 +122,7 @@ func buildWriterConfig(options ...Option) (*writerConfig, error) {
 
 func (c *writerConfig) transportConfig() transport.Config {
 	return transport.Config{
-		Nodes:          c.NodeConfigs,
+		NodeConfigs:    c.NodeConfigs,
 		Insecure:       c.Insecure,
 		RequestTimeout: c.RequestTimeout,
 		PingInterval:   c.PingInterval,

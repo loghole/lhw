@@ -23,7 +23,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "Error",
 			cfg: Config{
-				Nodes: nil,
+				NodeConfigs: nil,
 			},
 			wantErr:     true,
 			expectedErr: "no servers available for connection",
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "Pass",
 			cfg: Config{
-				Nodes:          []NodeConfig{{Host: "http://127.0.0.1:9200"}},
+				NodeConfigs:    []NodeConfig{{Host: "http://127.0.0.1:9200"}},
 				RequestTimeout: time.Hour,
 				PingInterval:   time.Hour,
 				SuccessCodes:   []int{200, 201, 202},

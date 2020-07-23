@@ -14,7 +14,7 @@ type Transport interface {
 }
 
 type Config struct {
-	Nodes          []NodeConfig
+	NodeConfigs    []NodeConfig
 	Insecure       bool
 	RequestTimeout time.Duration
 	PingInterval   time.Duration
@@ -34,7 +34,7 @@ type httpTransport struct {
 }
 
 func New(cfg Config) (Transport, error) {
-	pool, err := NewClientsPool(cfg.Nodes, cfg.Insecure)
+	pool, err := NewClientsPool(cfg.NodeConfigs, cfg.Insecure)
 	if err != nil {
 		return nil, err
 	}
