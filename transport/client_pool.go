@@ -32,11 +32,10 @@ func NewClientsPool(configs []NodeConfig, insecure bool) (ClientsPool, error) {
 		}
 	}
 
-	if len(configs) == 0 {
+	switch len(configs) {
+	case 0:
 		return nil, errors.New("no servers available for connection")
-	}
-
-	if len(configs) == 1 {
+	case 1:
 		return &SinglePool{client: NewNodeClient(configs[0], transport)}, nil
 	}
 
