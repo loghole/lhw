@@ -21,7 +21,7 @@ type ClientsPool interface {
 	OnSuccess(c *NodeClient)
 }
 
-func NewClientsPool(urls []string, insecure bool) (ClientsPool, error) {
+func NewClientsPool(configs []NodeConfig, insecure bool) (ClientsPool, error) {
 	transport := &http.Transport{
 		ForceAttemptHTTP2: true,
 	}
@@ -32,18 +32,17 @@ func NewClientsPool(urls []string, insecure bool) (ClientsPool, error) {
 		}
 	}
 
-	if len(urls) == 0 {
+	switch len(configs) {
+	case 0:
 		return nil, errors.New("no servers available for connection")
+	case 1:
+		return &SinglePool{client: NewNodeClient(configs[0], transport)}, nil
 	}
 
-	if len(urls) == 1 {
-		return &SinglePool{client: NewNodeClient(urls[0], transport)}, nil
-	}
+	clients := make([]*NodeClient, 0, len(configs))
 
-	clients := make([]*NodeClient, 0, len(urls))
-
-	for _, url := range urls {
-		clients = append(clients, NewNodeClient(url, transport))
+	for _, config := range configs {
+		clients = append(clients, NewNodeClient(config, transport))
 	}
 
 	return &ClusterPool{clients: clients}, nil

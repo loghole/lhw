@@ -10,34 +10,45 @@ import (
 func TestNewClientsPool(t *testing.T) {
 	tests := []struct {
 		name        string
-		urls        []string
+		hosts       []NodeConfig
 		wantErr     bool
 		expectedErr string
 		expectedRes interface{}
 	}{
 		{
 			name:        "Error",
-			urls:        []string{},
+			hosts:        []NodeConfig{},
 			wantErr:     true,
 			expectedErr: "no servers available for connection",
 			expectedRes: nil,
 		},
 		{
 			name:        "SinglePool",
-			urls:        []string{"http://127.0.0.1:9200"},
+			hosts:        []NodeConfig{
+				{
+					Host: "http://127.0.0.1:9200",
+				},
+			},
 			wantErr:     false,
 			expectedRes: new(SinglePool),
 		},
 		{
 			name:        "ClusterPool",
-			urls:        []string{"http://127.0.0.1:9200", "http://127.0.0.1:9201"},
+			hosts:        []NodeConfig{
+				{
+					Host: "http://127.0.0.1:9200",
+				},
+				{
+					Host: "http://127.0.0.1:9201",
+				},
+			},
 			wantErr:     false,
 			expectedRes: new(ClusterPool),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pool, err := NewClientsPool(tt.urls, true)
+			pool, err := NewClientsPool(tt.hosts, true)
 			if (err != nil) != tt.wantErr {
 				t.Error(err)
 			}
@@ -148,16 +159,37 @@ func BenchmarkClusterPool_NextLive(b *testing.B) {
 	b.StopTimer()
 
 	pool, err := NewClientsPool(
-		[]string{"http://127.0.0.1:9200",
-			"http://127.0.0.1:9201",
-			"http://127.0.0.1:9202",
-			"http://127.0.0.1:9203",
-			"http://127.0.0.1:9204",
-			"http://127.0.0.1:9205",
-			"http://127.0.0.1:9206",
-			"http://127.0.0.1:9207",
-			"http://127.0.0.1:9208",
-			"http://127.0.0.1:9209",
+		[]NodeConfig{
+			{
+				Host: "http://127.0.0.1:9200",
+			},
+			{
+				Host: "http://127.0.0.1:9201",
+			},
+			{
+				Host: "http://127.0.0.1:9202",
+			},
+			{
+				Host: "http://127.0.0.1:9203",
+			},
+			{
+				Host: "http://127.0.0.1:9204",
+			},
+			{
+				Host: "http://127.0.0.1:9205",
+			},
+			{
+				Host: "http://127.0.0.1:9206",
+			},
+			{
+				Host: "http://127.0.0.1:9207",
+			},
+			{
+				Host: "http://127.0.0.1:9208",
+			},
+			{
+				Host: "http://127.0.0.1:9209",
+			},
 		},
 		true,
 	)

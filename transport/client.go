@@ -17,10 +17,18 @@ const (
 const (
 	storeURI = "/api/v1/store"
 	pingURI  = "/api/v1/ping"
+
+	authorizationHeader = "Authorization"
 )
 
+type NodeConfig struct {
+	Host      string
+	AuthToken string
+}
+
 type NodeClient struct {
-	host string
+	host  string
+	token string
 
 	status      int32
 	activeReq   int32
@@ -30,9 +38,10 @@ type NodeClient struct {
 }
 
 // NewNodeClient create log hole node client.
-func NewNodeClient(url string, transport *http.Transport) *NodeClient {
+func NewNodeClient(config NodeConfig, transport *http.Transport) *NodeClient {
 	client := &NodeClient{
-		host:   url,
+		host:   config.Host,
+		token:  strings.Join([]string{"Bearer", config.AuthToken}, " "),
 		status: isLive,
 		client: &http.Client{Transport: transport},
 	}
@@ -72,6 +81,8 @@ func (c *NodeClient) do(uri string, body []byte, timeout time.Duration) (code in
 	if err != nil {
 		return 0, err
 	}
+
+	req.Header.Set(authorizationHeader, c.token)
 
 	atomic.StoreInt64(&c.lastUseTime, time.Now().UnixNano())
 

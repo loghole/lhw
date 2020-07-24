@@ -13,11 +13,10 @@ import (
 
 func main() {
 	// init writer
-	writer, err := lhw.NewWriter(lhw.Config{
-		NodeURIs: []string{"https://127.0.0.1:50000"},
-		Insecure: true,
-		Logger:   log.New(os.Stdout, "", log.Ldate),
-	})
+	writer, err := lhw.NewWriter(
+		lhw.NodeWithAuth("https://127.0.0.1:50000", "secret_token"),
+		lhw.WithInsecure(), lhw.WithLogger(log.New(os.Stdout, "", log.Ldate)),
+	)
 	if err != nil {
 		panic(err)
 	}
