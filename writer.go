@@ -12,6 +12,9 @@ var (
 	ErrWriteFailed = errors.New("write data to queue failed")
 )
 
+// The url can contain secret token e.g. https://secret_token@localhost:50000
+// Comma separated arrays are also supported, e.g. urlA, urlB.
+// Options start with the defaults but can be overridden.
 func NewWriter(url string, options ...Option) (writer *Writer, err error) {
 	opts := GetDefaultOptions()
 	opts.Servers = processUrlString(url)
@@ -50,6 +53,7 @@ type Writer struct {
 	wg     sync.WaitGroup
 }
 
+// Write writes the data to the queue if it is not full.
 func (w *Writer) Write(p []byte) (n int, err error) {
 	select {
 	case w.queue <- append([]byte{}, p...):
@@ -59,6 +63,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	}
 }
 
+// Close flushes any buffered log entries.
 func (w *Writer) Close() error {
 	close(w.queue)
 	w.wg.Wait()
@@ -87,12 +92,12 @@ func (w *Writer) send(data []byte) {
 	w.wg.Done()
 }
 
-// Process the url string argument to Connect.
-// Return an array of urls, even if only one.
 func processUrlString(url string) []string {
 	urls := strings.Split(url, ",")
-	for i, s := range urls {
-		urls[i] = strings.TrimSpace(s)
+
+	for idx, val := range urls {
+		urls[idx] = strings.TrimSpace(val)
 	}
+
 	return urls
 }

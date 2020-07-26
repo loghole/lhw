@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -12,16 +11,16 @@ import (
 )
 
 func main() {
-	// init writer
-	writer, err := lhw.NewWriter(
-		lhw.NodeWithAuth("https://127.0.0.1:50000", "secret_token"),
-		lhw.WithInsecure(), lhw.WithLogger(log.New(os.Stdout, "", log.Ldate)),
+	// Init writer.
+	writer, err := lhw.NewWriter("https://secret_token_1@127.0.0.1:50000",
+		lhw.WithLogger(log.New(os.Stdout, "", log.Ldate)),
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	defer writer.Close() // flushes storage, if contain any data
+	// Close flushes any buffered log entries.
+	defer writer.Close()
 
 	// init logger
 	logger := zap.New(zapcore.NewCore(
@@ -62,12 +61,8 @@ func getEncoder() zapcore.Encoder {
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     RFC3339NanoTimeEncoder,
+		EncodeTime:     zapcore.RFC3339NanoTimeEncoder,
 		EncodeDuration: zapcore.NanosDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	})
-}
-
-func RFC3339NanoTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(t.Format(time.RFC3339Nano))
 }
