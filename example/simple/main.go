@@ -10,17 +10,18 @@ import (
 )
 
 func main() {
-	writer, err := lhw.NewWriter(
-		lhw.NodeWithAuth("https://127.0.0.1:50000", "secret_token"),
-		lhw.WithInsecure(), lhw.WithLogger(log.New(os.Stdout, "", log.Ldate)),
+	// Init writer.
+	writer, err := lhw.NewWriter("http://secret_token_1@127.0.0.1:50000",
+		lhw.WithLogger(log.New(os.Stdout, "", log.Ldate)),
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	defer writer.Close() // flushes storage, if any
+	// Close flushes any buffered log entries.
+	defer writer.Close()
 
-	msg := fmt.Sprintf(`{"message": "test message", "time": %d}`, time.Now().UnixNano())
+	msg := fmt.Sprintf(`{"message": "test message", "time": "%s"}`, time.Now().Format(time.RFC3339Nano))
 
 	_, err = writer.Write([]byte(msg))
 	if err != nil {

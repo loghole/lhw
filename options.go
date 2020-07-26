@@ -9,123 +9,113 @@ import (
 )
 
 const (
-	// Default writer config
-	DefaultQueueCap = 1000
-
-	// Default transport settings
+	DefaultQueueCap       = 1000
 	DefaultPingInterval   = time.Second
 	DefaultRequestTimeout = 2 * time.Second
 )
 
 var (
-	ErrNodeHostsIsEmpty = errors.New("no node hosts to connect")
+	ErrBadQueueCapacity  = errors.New("queue capacity invalid")
+	ErrBadRequestTimeout = errors.New("request timeout invalid")
+	ErrBadPingInterval   = errors.New("ping interval invalid")
+	ErrSuccessCodes      = errors.New("success codes empty")
 )
 
-type Option func(cfg *writerConfig)
+type Option func(option *Options) error
 
 func WithQueueCap(capacity int) Option {
-	return func(cfg *writerConfig) {
-		cfg.QueueCap = capacity
+	return func(options *Options) error {
+		if capacity <= 0 {
+			return ErrBadQueueCapacity
+		}
+
+		options.QueueCap = capacity
+
+		return nil
 	}
 }
 
 func WithLogger(logger Logger) Option {
-	return func(cfg *writerConfig) {
-		cfg.Logger = logger
-	}
-}
+	return func(options *Options) error {
+		options.Logger = logger
 
-func Node(host string) Option {
-	return func(cfg *writerConfig) {
-		if host != "" {
-			cfg.NodeConfigs = append(cfg.NodeConfigs, transport.NodeConfig{Host: host})
-		}
-	}
-}
-
-func NodeWithAuth(host, token string) Option {
-	return func(cfg *writerConfig) {
-		if host != "" {
-			cfg.NodeConfigs = append(cfg.NodeConfigs, transport.NodeConfig{Host: host, AuthToken: token})
-		}
+		return nil
 	}
 }
 
 func WithInsecure() Option {
-	return func(cfg *writerConfig) {
-		cfg.Insecure = true
+	return func(options *Options) error {
+		options.Insecure = true
+
+		return nil
 	}
 }
 
 func WithRequestTimeout(timeout time.Duration) Option {
-	return func(cfg *writerConfig) {
-		cfg.RequestTimeout = timeout
+	return func(options *Options) error {
+		if timeout <= 0 {
+			return ErrBadRequestTimeout
+		}
+
+		options.RequestTimeout = timeout
+
+		return nil
 	}
 }
 
 func WithPingInterval(interval time.Duration) Option {
-	return func(cfg *writerConfig) {
-		cfg.PingInterval = interval
+	return func(options *Options) error {
+		if interval <= 0 {
+			return ErrBadPingInterval
+		}
+
+		options.PingInterval = interval
+
+		return nil
 	}
 }
 
 func WithSuccessCodes(codes ...int) Option {
-	return func(cfg *writerConfig) {
-		cfg.SuccessCodes = codes
+	return func(options *Options) error {
+		if len(codes) == 0 {
+			return ErrSuccessCodes
+		}
+
+		options.SuccessCodes = codes
+
+		return nil
 	}
 }
 
-type writerConfig struct {
+type Options struct {
 	// Writer settings
 	QueueCap int
 	Logger   Logger
 
-	// Transport settings
-	NodeConfigs    []transport.NodeConfig
+	Servers        []string
 	Insecure       bool
 	RequestTimeout time.Duration
 	PingInterval   time.Duration
 	SuccessCodes   []int
 }
 
-func buildWriterConfig(options ...Option) (*writerConfig, error) {
-	config := &writerConfig{}
-
-	for _, option := range options {
-		option(config)
+// GetDefaultOptions returns default configuration options for the client.
+func GetDefaultOptions() *Options {
+	return &Options{
+		QueueCap:       DefaultQueueCap,
+		Insecure:       false,
+		RequestTimeout: DefaultRequestTimeout,
+		PingInterval:   DefaultPingInterval,
+		SuccessCodes:   []int{http.StatusOK, http.StatusCreated},
 	}
-
-	if config.QueueCap <= 0 {
-		config.QueueCap = DefaultQueueCap
-	}
-
-	if config.RequestTimeout == 0 {
-		config.RequestTimeout = DefaultRequestTimeout
-	}
-
-	if config.PingInterval == 0 {
-		config.PingInterval = DefaultPingInterval
-	}
-
-	if len(config.SuccessCodes) == 0 {
-		config.SuccessCodes = []int{
-			http.StatusOK,
-		}
-	}
-
-	if len(config.NodeConfigs) == 0 {
-		return nil, ErrNodeHostsIsEmpty
-	}
-
-	return config, nil
 }
 
-func (c *writerConfig) transportConfig() transport.Config {
+func (o *Options) transportConfig() transport.Config {
 	return transport.Config{
-		NodeConfigs:    c.NodeConfigs,
-		Insecure:       c.Insecure,
-		RequestTimeout: c.RequestTimeout,
-		PingInterval:   c.PingInterval,
-		SuccessCodes:   c.SuccessCodes,
+		Servers:        o.Servers,
+		Insecure:       o.Insecure,
+		RequestTimeout: o.RequestTimeout,
+		PingInterval:   o.PingInterval,
+		SuccessCodes:   o.SuccessCodes,
 	}
 }

@@ -2,6 +2,7 @@ package lhw
 
 import (
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/gadavy/lhw/transport"
@@ -11,18 +12,29 @@ var (
 	ErrWriteFailed = errors.New("write data to queue failed")
 )
 
-func NewWriter(options ...Option) (writer *Writer, err error) {
-	config, err := buildWriterConfig(options...)
-	if err != nil {
-		return nil, err
+// The url can contain secret token e.g. https://secret_token@localhost:50000
+// Comma separated arrays are also supported, e.g. urlA, urlB.
+// Options start with the defaults but can be overridden.
+func NewWriter(url string, options ...Option) (writer *Writer, err error) {
+	opts := GetDefaultOptions()
+	opts.Servers = processUrlString(url)
+
+	for _, option := range options {
+		if option == nil {
+			continue
+		}
+
+		if err := option(opts); err != nil {
+			return nil, err
+		}
 	}
 
 	writer = &Writer{
-		logger: config.Logger,
-		queue:  make(chan []byte, config.QueueCap),
+		logger: opts.Logger,
+		queue:  make(chan []byte, opts.QueueCap),
 	}
 
-	writer.transport, err = transport.New(config.transportConfig())
+	writer.transport, err = transport.New(opts.transportConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +53,7 @@ type Writer struct {
 	wg     sync.WaitGroup
 }
 
+// Write writes the data to the queue if it is not full.
 func (w *Writer) Write(p []byte) (n int, err error) {
 	select {
 	case w.queue <- append([]byte{}, p...):
@@ -50,6 +63,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	}
 }
 
+// Close flushes any buffered log entries.
 func (w *Writer) Close() error {
 	close(w.queue)
 	w.wg.Wait()
@@ -76,4 +90,14 @@ func (w *Writer) send(data []byte) {
 	}
 
 	w.wg.Done()
+}
+
+func processUrlString(url string) []string {
+	urls := strings.Split(url, ",")
+
+	for idx, val := range urls {
+		urls[idx] = strings.TrimSpace(val)
+	}
+
+	return urls
 }

@@ -14,150 +14,79 @@ import (
 
 func TestOptions(t *testing.T) {
 	tests := []struct {
-		name     string
-		option   Option
-		expected *writerConfig
-	}{
-		{
-			name:     "WithQueueCap",
-			option:   WithQueueCap(10),
-			expected: &writerConfig{QueueCap: 10},
-		},
-		{
-			name:     "WithLogger",
-			option:   WithLogger(log.New(os.Stdout, "", log.Ltime)),
-			expected: &writerConfig{Logger: log.New(os.Stdout, "", log.Ltime)},
-		},
-		{
-			name:   "Node",
-			option: Node("127.0.0.1:50000"),
-			expected: &writerConfig{
-				NodeConfigs: []transport.NodeConfig{
-					{
-						Host: "127.0.0.1:50000",
-					},
-				},
-			},
-		},
-		{
-			name:   "NodeWithAuth",
-			option: NodeWithAuth("127.0.0.1:50000", "token"),
-			expected: &writerConfig{
-				NodeConfigs: []transport.NodeConfig{
-					{
-						Host:      "127.0.0.1:50000",
-						AuthToken: "token",
-					},
-				},
-			},
-		},
-		{
-			name:     "WithInsecure",
-			option:   WithInsecure(),
-			expected: &writerConfig{Insecure: true},
-		},
-		{
-			name:     "WithRequestTimeout",
-			option:   WithRequestTimeout(time.Second),
-			expected: &writerConfig{RequestTimeout: time.Second},
-		},
-		{
-			name:     "WithPingInterval",
-			option:   WithPingInterval(time.Second),
-			expected: &writerConfig{PingInterval: time.Second},
-		},
-		{
-			name:     "WithSuccessCodes",
-			option:   WithSuccessCodes(200, 201),
-			expected: &writerConfig{SuccessCodes: []int{200, 201}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config := &writerConfig{}
-
-			tt.option(config)
-
-			assert.Equal(t, tt.expected, config)
-		})
-	}
-}
-
-func TestBuildWriterConfig(t *testing.T) {
-	tests := []struct {
 		name        string
-		options     []Option
+		option      Option
 		wantErr     bool
-		expectedRes *writerConfig
+		expectedRes *Options
 		expectedErr string
 	}{
 		{
-			name: "Pass#1",
-			options: []Option{
-				WithQueueCap(10),
-				WithLogger(log.New(os.Stdout, "", log.Ltime)),
-				Node("127.0.0.1:50000"),
-				NodeWithAuth("127.0.0.1:50001", "token"),
-				WithInsecure(),
-				WithRequestTimeout(time.Second),
-				WithPingInterval(time.Second),
-				WithSuccessCodes(200, 201),
-			},
-			wantErr: false,
-			expectedRes: &writerConfig{
-				QueueCap: 10,
-				Logger:   log.New(os.Stdout, "", log.Ltime),
-				NodeConfigs: []transport.NodeConfig{
-					{
-						Host:      "127.0.0.1:50000",
-						AuthToken: "",
-					},
-					{
-						Host:      "127.0.0.1:50001",
-						AuthToken: "token",
-					},
-				},
-				Insecure:       true,
-				RequestTimeout: time.Second,
-				PingInterval:   time.Second,
-				SuccessCodes:   []int{200, 201},
-			},
-			expectedErr: "",
+			name:        "WithQueueCap",
+			option:      WithQueueCap(10),
+			expectedRes: &Options{QueueCap: 10},
 		},
 		{
-			name: "Pass#1",
-			options: []Option{
-				Node("127.0.0.1:50000"),
-			},
-			wantErr: false,
-			expectedRes: &writerConfig{
-				QueueCap: DefaultQueueCap,
-				NodeConfigs: []transport.NodeConfig{
-					{
-						Host: "127.0.0.1:50000",
-					},
-				},
-				RequestTimeout: DefaultRequestTimeout,
-				PingInterval:   DefaultPingInterval,
-				SuccessCodes:   []int{http.StatusOK},
-			},
-			expectedErr: "",
-		},
-		{
-			name:        "ErrorNoNodesHosts",
-			options:     []Option{},
+			name:        "WithQueueCapError",
+			option:      WithQueueCap(-10),
 			wantErr:     true,
-			expectedErr: ErrNodeHostsIsEmpty.Error(),
+			expectedErr: ErrBadQueueCapacity.Error(),
+		},
+		{
+			name:        "WithLogger",
+			option:      WithLogger(log.New(os.Stdout, "", log.Ltime)),
+			expectedRes: &Options{Logger: log.New(os.Stdout, "", log.Ltime)},
+		},
+		{
+			name:        "WithInsecure",
+			option:      WithInsecure(),
+			expectedRes: &Options{Insecure: true},
+		},
+		{
+			name:        "WithRequestTimeout",
+			option:      WithRequestTimeout(time.Second),
+			expectedRes: &Options{RequestTimeout: time.Second},
+		},
+		{
+			name:        "WithRequestTimeoutError",
+			option:      WithRequestTimeout(-time.Second),
+			wantErr:     true,
+			expectedErr: ErrBadRequestTimeout.Error(),
+		},
+		{
+			name:        "WithPingInterval",
+			option:      WithPingInterval(time.Second),
+			expectedRes: &Options{PingInterval: time.Second},
+		},
+		{
+			name:        "WithPingIntervalError",
+			option:      WithPingInterval(-time.Second),
+			wantErr:     true,
+			expectedErr: ErrBadPingInterval.Error(),
+		},
+		{
+			name:        "WithSuccessCodes",
+			option:      WithSuccessCodes(200, 201),
+			expectedRes: &Options{SuccessCodes: []int{200, 201}},
+		},
+		{
+			name:        "WithSuccessCodesError",
+			option:      WithSuccessCodes(),
+			wantErr:     true,
+			expectedErr: ErrSuccessCodes.Error(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := buildWriterConfig(tt.options...)
+			config := &Options{}
+
+			err := tt.option(config)
 			if (err != nil) != tt.wantErr {
 				t.Error(err)
 			}
 
-			assert.Equal(t, tt.expectedRes, config)
+			if !tt.wantErr {
+				assert.Equal(t, tt.expectedRes, config)
+			}
 
 			if tt.wantErr {
 				assert.EqualError(t, err, tt.expectedErr)
@@ -168,36 +97,30 @@ func TestBuildWriterConfig(t *testing.T) {
 
 func TestTransportConfig(t *testing.T) {
 	expected := transport.Config{
-		NodeConfigs: []transport.NodeConfig{
-			{
-				Host:      "127.0.0.1:50000",
-				AuthToken: "token1",
-			},
-			{
-				Host:      "127.0.0.1:50001",
-				AuthToken: "token2",
-			},
-		},
+		Servers:        []string{"http://token1@127.0.0.1:50000", "http://token2@127.0.0.1:50001"},
 		RequestTimeout: DefaultRequestTimeout,
 		PingInterval:   DefaultPingInterval,
 		SuccessCodes:   []int{200, 201, 202},
 	}
 
-	config := writerConfig{
-		NodeConfigs: []transport.NodeConfig{
-			{
-				Host:      "127.0.0.1:50000",
-				AuthToken: "token1",
-			},
-			{
-				Host:      "127.0.0.1:50001",
-				AuthToken: "token2",
-			},
-		},
+	config := Options{
+		Servers:        []string{"http://token1@127.0.0.1:50000", "http://token2@127.0.0.1:50001"},
 		RequestTimeout: DefaultRequestTimeout,
 		PingInterval:   DefaultPingInterval,
 		SuccessCodes:   []int{200, 201, 202},
 	}
 
 	assert.Equal(t, expected, config.transportConfig())
+}
+
+func TestGetDefaultOptions(t *testing.T) {
+	expected := &Options{
+		QueueCap:       DefaultQueueCap,
+		Insecure:       false,
+		RequestTimeout: DefaultRequestTimeout,
+		PingInterval:   DefaultPingInterval,
+		SuccessCodes:   []int{http.StatusOK, http.StatusCreated},
+	}
+
+	assert.Equal(t, expected, GetDefaultOptions())
 }

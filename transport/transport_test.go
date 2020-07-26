@@ -23,7 +23,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "Error",
 			cfg: Config{
-				NodeConfigs: nil,
+				Servers: nil,
 			},
 			wantErr:     true,
 			expectedErr: "no servers available for connection",
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "Pass",
 			cfg: Config{
-				NodeConfigs:    []NodeConfig{{Host: "http://127.0.0.1:9200"}},
+				Servers:    []string{"http://127.0.0.1:9200"},
 				RequestTimeout: time.Hour,
 				PingInterval:   time.Hour,
 				SuccessCodes:   []int{200, 201, 202},
@@ -188,7 +188,7 @@ func TestHttpTransport_SendBulk(t *testing.T) {
 			ts.StartTLS()
 
 			tt.client.client = ts.Client()
-			tt.client.host = ts.URL
+			tt.client.addr = ts.URL
 
 			transport := tt.transport
 			transport.clientsPool = &SinglePool{client: tt.client}
@@ -257,7 +257,7 @@ func TestHttpTransport_pingDeadNodes(t *testing.T) {
 			ts.StartTLS()
 
 			tt.client.client = ts.Client()
-			tt.client.host = ts.URL
+			tt.client.addr = ts.URL
 
 			transport := tt.transport
 			transport.clientsPool = &SinglePool{client: tt.client}

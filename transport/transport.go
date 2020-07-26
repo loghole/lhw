@@ -14,7 +14,7 @@ type Transport interface {
 }
 
 type Config struct {
-	NodeConfigs    []NodeConfig
+	Servers        []string
 	Insecure       bool
 	RequestTimeout time.Duration
 	PingInterval   time.Duration
@@ -33,8 +33,8 @@ type httpTransport struct {
 	liveSignal internal.Signal
 }
 
-func New(cfg Config) (Transport, error) {
-	pool, err := NewClientsPool(cfg.NodeConfigs, cfg.Insecure)
+func New(config Config) (Transport, error) {
+	pool, err := NewClientsPool(config.Servers, config.Insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -42,15 +42,15 @@ func New(cfg Config) (Transport, error) {
 	transport := &httpTransport{
 		clientsPool:    pool,
 		connStatus:     isLive,
-		pingInterval:   cfg.PingInterval,
-		requestTimeout: cfg.RequestTimeout,
+		pingInterval:   config.PingInterval,
+		requestTimeout: config.RequestTimeout,
 		successCodes:   make(map[int]bool),
 
 		liveSignal: make(internal.Signal, 1),
 		deadSignal: make(internal.Signal, 1),
 	}
 
-	for _, code := range cfg.SuccessCodes {
+	for _, code := range config.SuccessCodes {
 		transport.successCodes[code] = true
 	}
 
