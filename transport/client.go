@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -27,7 +28,7 @@ type NodeConfig struct {
 }
 
 type NodeClient struct {
-	host  string
+	addr  string
 	token string
 
 	status      int32
@@ -38,15 +39,17 @@ type NodeClient struct {
 }
 
 // NewNodeClient create log hole node client.
-func NewNodeClient(config NodeConfig, transport *http.Transport) *NodeClient {
+func NewNodeClient(url string, transport *http.Transport) (*NodeClient, error) {
 	client := &NodeClient{
-		host:   config.Host,
-		token:  strings.Join([]string{"Bearer", config.AuthToken}, " "),
 		status: isLive,
 		client: &http.Client{Transport: transport},
 	}
 
-	return client
+	if err := client.parseURL(url); err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
 func (c *NodeClient) SendRequest(body []byte, timeout time.Duration) (code int, err error) {
@@ -75,13 +78,12 @@ func (c *NodeClient) do(uri string, body []byte, timeout time.Duration) (code in
 	atomic.AddInt32(&c.activeReq, 1)
 	defer atomic.AddInt32(&c.activeReq, -1)
 
-	url := strings.Join([]string{c.host, uri}, "")
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.addr, bytes.NewBuffer(body))
 	if err != nil {
 		return 0, err
 	}
 
+	req.URL.Path = uri
 	req.Header.Set(authorizationHeader, c.token)
 
 	atomic.StoreInt64(&c.lastUseTime, time.Now().UnixNano())
@@ -96,4 +98,20 @@ func (c *NodeClient) do(uri string, body []byte, timeout time.Duration) (code in
 	}
 
 	return resp.StatusCode, err
+}
+
+func (c *NodeClient) parseURL(addr string) (err error) {
+	parsed, err := url.Parse(addr)
+	if err != nil {
+		return err
+	}
+
+	c.token = strings.Join([]string{"Bearer", parsed.User.String()}, " ")
+
+	// Drop user info
+	parsed.User = nil
+
+	c.addr = parsed.String()
+
+	return nil
 }

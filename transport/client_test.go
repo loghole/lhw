@@ -97,7 +97,7 @@ func TestNodeClient_PingRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = tt.handler
 
-			client := NodeClient{host: ts.URL, client: ts.Client()}
+			client := NodeClient{addr: ts.URL, client: ts.Client()}
 
 			code, err := client.PingRequest(time.Second)
 			if (err != nil) != tt.wantErr {
@@ -188,7 +188,7 @@ func TestNodeClient_SendRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = tt.handler
 
-			client := NodeClient{host: ts.URL, client: ts.Client()}
+			client := NodeClient{addr: ts.URL, client: ts.Client()}
 
 			code, err := client.SendRequest(tt.body, time.Second)
 			if (err != nil) != tt.wantErr {

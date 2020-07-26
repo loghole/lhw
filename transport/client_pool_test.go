@@ -10,40 +10,35 @@ import (
 func TestNewClientsPool(t *testing.T) {
 	tests := []struct {
 		name        string
-		hosts       []NodeConfig
+		hosts       []string
 		wantErr     bool
 		expectedErr string
 		expectedRes interface{}
 	}{
 		{
 			name:        "Error",
-			hosts:        []NodeConfig{},
+			hosts:       []string{},
 			wantErr:     true,
 			expectedErr: "no servers available for connection",
 			expectedRes: nil,
 		},
 		{
 			name:        "SinglePool",
-			hosts:        []NodeConfig{
-				{
-					Host: "http://127.0.0.1:9200",
-				},
-			},
+			hosts:       []string{"http://127.0.0.1:9200"},
 			wantErr:     false,
-			expectedRes: new(SinglePool),
+			expectedRes: &SinglePool{},
 		},
 		{
 			name:        "ClusterPool",
-			hosts:        []NodeConfig{
-				{
-					Host: "http://127.0.0.1:9200",
-				},
-				{
-					Host: "http://127.0.0.1:9201",
-				},
-			},
+			hosts:       []string{"http://127.0.0.1:9200", "http://127.0.0.1:9201"},
 			wantErr:     false,
-			expectedRes: new(ClusterPool),
+			expectedRes: &ClusterPool{},
+		},
+		{
+			name:        "PoolError",
+			hosts:       []string{"*http://127.0.0.1:9200"},
+			wantErr:     true,
+			expectedErr: "parse \"*http://127.0.0.1:9200\": first path segment in URL cannot contain colon",
 		},
 	}
 	for _, tt := range tests {
@@ -65,7 +60,7 @@ func TestNewClientsPool(t *testing.T) {
 func TestSinglePool(t *testing.T) {
 	pool := SinglePool{
 		client: &NodeClient{
-			host:        "http://127.0.0.1:9200",
+			addr:        "http://127.0.0.1:9200",
 			lastUseTime: time.Now().UnixNano(),
 		},
 	}
@@ -102,11 +97,11 @@ func TestSinglePool(t *testing.T) {
 func TestClusterPool(t *testing.T) {
 	clients := []*NodeClient{
 		{
-			host:        "http://127.0.0.1:9200",
+			addr:        "http://127.0.0.1:9200",
 			lastUseTime: time.Now().UnixNano(),
 		},
 		{
-			host:        "http://127.0.0.1:9201",
+			addr:        "http://127.0.0.1:9201",
 			lastUseTime: time.Now().UnixNano(),
 		},
 	}
@@ -158,39 +153,18 @@ func TestClusterPool(t *testing.T) {
 func BenchmarkClusterPool_NextLive(b *testing.B) {
 	b.StopTimer()
 
-	pool, err := NewClientsPool(
-		[]NodeConfig{
-			{
-				Host: "http://127.0.0.1:9200",
-			},
-			{
-				Host: "http://127.0.0.1:9201",
-			},
-			{
-				Host: "http://127.0.0.1:9202",
-			},
-			{
-				Host: "http://127.0.0.1:9203",
-			},
-			{
-				Host: "http://127.0.0.1:9204",
-			},
-			{
-				Host: "http://127.0.0.1:9205",
-			},
-			{
-				Host: "http://127.0.0.1:9206",
-			},
-			{
-				Host: "http://127.0.0.1:9207",
-			},
-			{
-				Host: "http://127.0.0.1:9208",
-			},
-			{
-				Host: "http://127.0.0.1:9209",
-			},
-		},
+	pool, err := NewClientsPool([]string{
+		"http://127.0.0.1:9200",
+		"http://127.0.0.1:9201",
+		"http://127.0.0.1:9202",
+		"http://127.0.0.1:9203",
+		"http://127.0.0.1:9204",
+		"http://127.0.0.1:9205",
+		"http://127.0.0.1:9206",
+		"http://127.0.0.1:9207",
+		"http://127.0.0.1:9208",
+		"http://127.0.0.1:9209",
+	},
 		true,
 	)
 	if err != nil {
