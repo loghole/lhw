@@ -2,6 +2,7 @@ package lhw
 
 import (
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/gadavy/lhw/transport"
@@ -11,18 +12,26 @@ var (
 	ErrWriteFailed = errors.New("write data to queue failed")
 )
 
-func NewWriter(options ...Option) (writer *Writer, err error) {
-	config, err := buildWriterConfig(options...)
-	if err != nil {
-		return nil, err
+func NewWriter(url string, options ...Option) (writer *Writer, err error) {
+	opts := GetDefaultOptions()
+	opts.Servers = processUrlString(url)
+
+	for _, option := range options {
+		if option == nil {
+			continue
+		}
+
+		if err := option(opts); err != nil {
+			return nil, err
+		}
 	}
 
 	writer = &Writer{
-		logger: config.Logger,
-		queue:  make(chan []byte, config.QueueCap),
+		logger: opts.Logger,
+		queue:  make(chan []byte, opts.QueueCap),
 	}
 
-	writer.transport, err = transport.New(config.transportConfig())
+	writer.transport, err = transport.New(opts.transportConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -76,4 +85,14 @@ func (w *Writer) send(data []byte) {
 	}
 
 	w.wg.Done()
+}
+
+// Process the url string argument to Connect.
+// Return an array of urls, even if only one.
+func processUrlString(url string) []string {
+	urls := strings.Split(url, ",")
+	for i, s := range urls {
+		urls[i] = strings.TrimSpace(s)
+	}
+	return urls
 }
