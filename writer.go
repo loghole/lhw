@@ -58,6 +58,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	return w.write(append([]byte{}, p...))
 }
 
+// write writes the data to the queue if it is not full.
 func (w *Writer) write(p []byte) (n int, err error) {
 	select {
 	case w.queue <- p:
@@ -100,7 +101,7 @@ func (w *Writer) send(data []byte) {
 		w.logger.Printf("[error] send data failed: %v", err)
 	}
 
-	// if sending failed, return data to queue
+	// if sending failed, return data to queue if it is not full.
 	_, err = w.write(data)
 	if err == nil {
 		return
