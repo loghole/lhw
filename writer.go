@@ -55,8 +55,13 @@ type Writer struct {
 
 // Write writes the data to the queue if it is not full.
 func (w *Writer) Write(p []byte) (n int, err error) {
+	return w.write(append([]byte{}, p...))
+}
+
+// write writes the data to the queue if it is not full.
+func (w *Writer) write(p []byte) (n int, err error) {
 	select {
-	case w.queue <- append([]byte{}, p...):
+	case w.queue <- p:
 		return len(p), nil
 	default:
 		return 0, ErrWriteFailed
@@ -85,11 +90,26 @@ func (w *Writer) worker() {
 }
 
 func (w *Writer) send(data []byte) {
-	if err := w.transport.Send(data); err != nil && w.logger != nil {
+	defer w.wg.Done()
+
+	err := w.transport.Send(data)
+	if err == nil {
+		return
+	}
+
+	if w.logger != nil {
 		w.logger.Printf("[error] send data failed: %v", err)
 	}
 
-	w.wg.Done()
+	// if sending failed, return data to queue if it is not full.
+	_, err = w.write(data)
+	if err == nil {
+		return
+	}
+
+	if w.logger != nil {
+		w.logger.Printf("[error] %v", err)
+	}
 }
 
 func processUrlString(url string) []string {
