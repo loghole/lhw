@@ -29,7 +29,7 @@ func TestWriter_Write(t *testing.T) {
 			name: "ErrorQueueIsFull",
 			writer: func() *Writer {
 				queue := internal.NewQueue(0)
-				queue.Push([]byte("start msg"))
+				_ = queue.Push([]byte("start msg"))
 
 				return &Writer{queue: queue}
 			},

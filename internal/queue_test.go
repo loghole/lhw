@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"log"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -24,11 +23,13 @@ func TestQueue(t *testing.T) {
 	err = queue.Push([]byte("3"))
 	assert.EqualError(t, err, ErrQueueIsClosed.Error())
 
-	assert.Equal(t, []byte("1"), <-queue.Read())
+	assert.True(t, queue.Next(), "expected true")
+	assert.Equal(t, []byte("1"), queue.Read())
 
-	assert.Nil(t, <-queue.Read(), "expected nil")
+	assert.False(t, queue.Next(), "expected false")
 
 	queue = NewQueue(10)
+
 	err = queue.Push([]byte("1"))
 	assert.Nil(t, err, "expected nil error")
 
@@ -41,67 +42,61 @@ func TestQueue(t *testing.T) {
 	err = queue.Push([]byte("4"))
 	assert.Nil(t, err, "expected nil error")
 
+	assert.True(t, queue.Next(), "expected true")
+	assert.Equal(t, []byte("1"), queue.Read())
+
 	queue.Close()
 
-	assert.Equal(t, []byte("1"), <-queue.Read())
+	assert.True(t, queue.Next(), "expected true")
+	assert.Equal(t, []byte("2"), queue.Read())
 
-	assert.Equal(t, []byte("2"), <-queue.Read())
+	assert.True(t, queue.Next(), "expected true")
+	assert.Equal(t, []byte("3"), queue.Read())
 
-	assert.Equal(t, []byte("3"), <-queue.Read())
+	assert.True(t, queue.Next(), "expected true")
+	assert.Equal(t, []byte("4"), queue.Read())
 
-	assert.Equal(t, []byte("4"), <-queue.Read())
+	assert.False(t, queue.Next(), "expected false")
 }
 
 func TestQueueRace(t *testing.T) {
-	queue := NewQueue(1000)
-
 	var (
-		wg      = &sync.WaitGroup{}
+		queue = NewQueue(1000)
+		wg    = &sync.WaitGroup{}
+
 		counter int64
 	)
 
-	wg.Add(1)
-	go func(counter *int64, wg *sync.WaitGroup, queue *Queue) {
-		defer wg.Done()
-
-		for range <-queue.Read() {
-			atomic.AddInt64(counter, -1)
-		}
-	}(&counter, wg, queue)
-
-	wg.Add(1)
-	go func(counter *int64, wg *sync.WaitGroup, queue *Queue) {
-		defer wg.Done()
-
-		for {
-			if err := queue.Push([]byte("msg")); err != nil {
-				t.Log(err)
-				return
-			}
-			atomic.AddInt64(counter, 1)
-		}
-	}(&counter, wg, queue)
-
-	wg.Add(1)
-	go func(counter *int64, wg *sync.WaitGroup, queue *Queue) {
-		defer wg.Done()
-
-		for {
-			if err := queue.Push([]byte("msg")); err != nil {
-				t.Log(err)
-				return
-			}
-			atomic.AddInt64(counter, 1)
-		}
-	}(&counter, wg, queue)
+	wg.Add(3)
+	go writer(wg, queue, &counter)
+	go writer(wg, queue, &counter)
+	go reader(wg, queue, &counter)
 
 	queue.Close()
 
-	time.Sleep(time.Second)
+	time.AfterFunc(time.Second * 5, func() { t.Fail() })
 
 	wg.Wait()
-
 	assert.Equal(t, (int64)(0), counter)
+}
 
-	log.Println(counter)
+func writer(wg *sync.WaitGroup, queue *Queue, counter *int64) {
+	defer wg.Done()
+
+	for {
+		if err := queue.Push([]byte("msg")); err != nil {
+			return
+		}
+
+		atomic.AddInt64(counter, 1)
+	}
+}
+
+func reader(wg *sync.WaitGroup, queue *Queue, counter *int64) {
+	defer wg.Done()
+
+	for queue.Next() {
+		queue.Read()
+		atomic.AddInt64(counter, -1)
+	}
 }

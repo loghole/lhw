@@ -16,19 +16,19 @@ const (
 )
 
 type Queue struct {
-	ch     chan []byte
-	closed int32
+	ch    chan []byte
+	state int32
 }
 
 func NewQueue(capacity int) *Queue {
 	return &Queue{
-		ch:     make(chan []byte, capacity),
-		closed: opened,
+		ch:    make(chan []byte, capacity),
+		state: opened,
 	}
 }
 
 func (s *Queue) Push(data []byte) error {
-	if !atomic.CompareAndSwapInt32(&s.closed, opened, atomic.LoadInt32(&s.closed)) {
+	if atomic.LoadInt32(&s.state) != opened {
 		return ErrQueueIsClosed
 	}
 
@@ -40,12 +40,14 @@ func (s *Queue) Push(data []byte) error {
 	}
 }
 
-func (s *Queue) Read() <-chan []byte {
-	return s.ch
+func (s *Queue) Read() []byte {
+	return <-s.ch
 }
 
 func (s *Queue) Close() {
-	if atomic.CompareAndSwapInt32(&s.closed, opened, closed) {
-		close(s.ch)
-	}
+	atomic.StoreInt32(&s.state, closed)
+}
+
+func (s *Queue) Next() bool {
+	return atomic.LoadInt32(&s.state) == opened || len(s.ch) > 0
 }

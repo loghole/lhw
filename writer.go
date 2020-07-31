@@ -78,7 +78,9 @@ func (w *Writer) Close() error {
 }
 
 func (w *Writer) worker() {
-	for data := range w.queue.Read() {
+	for w.queue.Next() {
+		data := w.queue.Read()
+
 		if !w.transport.IsConnected() {
 			<-w.transport.IsReconnected()
 		}
