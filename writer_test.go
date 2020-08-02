@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gadavy/lhw/test"
+	"github.com/gadavy/lhw/internal"
 )
 
 func TestWriter_Write(t *testing.T) {
@@ -19,7 +19,7 @@ func TestWriter_Write(t *testing.T) {
 		{
 			name: "Pass",
 			writer: func() *Writer {
-				queue := make(chan []byte, 1)
+				queue := internal.NewQueue(1)
 
 				return &Writer{queue: queue}
 			},
@@ -30,14 +30,26 @@ func TestWriter_Write(t *testing.T) {
 		{
 			name: "ErrorQueueIsFull",
 			writer: func() *Writer {
-				queue := make(chan []byte, 1)
-				queue <- []byte{}
+				queue := internal.NewQueue(1)
+				_ = queue.Push([]byte{})
 
 				return &Writer{queue: queue}
 			},
 			wantErr:     true,
 			expectedN:   0,
-			expectedErr: "write data to queue failed",
+			expectedErr: "write data to queue failed: is full",
+		},
+		{
+			name: "ErrorQueueIsClosed",
+			writer: func() *Writer {
+				queue := internal.NewQueue(1)
+				queue.Close()
+
+				return &Writer{queue: queue}
+			},
+			wantErr:     true,
+			expectedN:   0,
+			expectedErr: "write data to queue failed: is closed",
 		},
 	}
 	for _, tt := range tests {
@@ -56,29 +68,4 @@ func TestWriter_Write(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestWriterQueue(t *testing.T) {
-	transport := &test.StubTransport{}
-
-	writer := &Writer{
-		transport: transport,
-		queue:     make(chan []byte, 1000),
-		closed:    make(chan struct{}, 1),
-	}
-
-	for i := 0; i < 5; i++ {
-		go func() {
-			for i := 0; i < 100; i++ {
-				writer.Write([]byte{})
-			}
-		}()
-	}
-
-	writer.wg.Add(1)
-	go writer.worker()
-
-	writer.Close()
-
-	assert.Equal(t, int64(500), transport.Counter)
 }
