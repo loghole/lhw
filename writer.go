@@ -2,9 +2,11 @@ package lhw
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
+	"github.com/gadavy/lhw/internal"
 	"github.com/gadavy/lhw/transport"
 )
 
@@ -31,7 +33,7 @@ func NewWriter(url string, options ...Option) (writer *Writer, err error) {
 
 	writer = &Writer{
 		logger: opts.Logger,
-		queue:  make(chan []byte, opts.QueueCap),
+		queue:  internal.NewQueue(opts.QueueCap),
 	}
 
 	writer.transport, err = transport.New(opts.transportConfig())
@@ -47,10 +49,10 @@ func NewWriter(url string, options ...Option) (writer *Writer, err error) {
 
 type Writer struct {
 	transport transport.Transport
+	queue     *internal.Queue
+	logger    Logger
 
-	queue  chan []byte
-	logger Logger
-	wg     sync.WaitGroup
+	wg sync.WaitGroup
 }
 
 // Write writes the data to the queue if it is not full.
@@ -60,24 +62,25 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 // write writes the data to the queue if it is not full.
 func (w *Writer) write(p []byte) (n int, err error) {
-	select {
-	case w.queue <- p:
-		return len(p), nil
-	default:
-		return 0, ErrWriteFailed
+	if err := w.queue.Push(p); err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrWriteFailed, err)
 	}
+
+	return len(p), nil
 }
 
 // Close flushes any buffered log entries.
 func (w *Writer) Close() error {
-	close(w.queue)
+	w.queue.Close()
 	w.wg.Wait()
 
 	return nil
 }
 
 func (w *Writer) worker() {
-	for data := range w.queue {
+	defer w.wg.Done()
+
+	for data := range w.queue.Read() {
 		if !w.transport.IsConnected() {
 			<-w.transport.IsReconnected()
 		}
@@ -85,8 +88,6 @@ func (w *Writer) worker() {
 		w.wg.Add(1)
 		go w.send(data)
 	}
-
-	w.wg.Done()
 }
 
 func (w *Writer) send(data []byte) {
