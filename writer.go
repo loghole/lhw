@@ -101,10 +101,12 @@ func (w *Writer) worker() {
 	for len(w.queue) > 0 {
 		data := <-w.queue
 
-		if w.transport.IsConnected() {
-			w.wg.Add(1)
-			go w.send(data)
+		if !w.transport.IsConnected() {
+			<-w.transport.IsReconnected()
 		}
+
+		w.wg.Add(1)
+		go w.send(data)
 	}
 }
 
