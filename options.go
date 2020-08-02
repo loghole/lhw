@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gadavy/lhw/transport"
+	"github.com/loghole/lhw/transport"
 )
 
 const (

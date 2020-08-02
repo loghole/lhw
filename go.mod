@@ -1,4 +1,4 @@
-module github.com/gadavy/lhw
+module github.com/loghole/lhw
 
 go 1.14
 

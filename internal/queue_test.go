@@ -16,12 +16,12 @@ func TestQueue(t *testing.T) {
 	assert.Nil(t, err, "expected nil error")
 
 	err = queue.Push([]byte("2"))
-	assert.EqualError(t, err, ErrQueueIsFull.Error())
+	assert.EqualError(t, err, ErrIsFull.Error())
 
 	queue.Close()
 
 	err = queue.Push([]byte("3"))
-	assert.EqualError(t, err, ErrQueueIsClosed.Error())
+	assert.EqualError(t, err, ErrIsClosed.Error())
 
 	assert.Equal(t, []byte("1"), <-queue.Read())
 

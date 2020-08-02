@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gadavy/lhw/internal"
+	"github.com/loghole/lhw/internal"
 )
 
 type Transport interface {

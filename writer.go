@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gadavy/lhw/internal"
-	"github.com/gadavy/lhw/transport"
+	"github.com/loghole/lhw/internal"
+	"github.com/loghole/lhw/transport"
 )
 
 var (
