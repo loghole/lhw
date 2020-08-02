@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gadavy/lhw/transport"
+	"github.com/loghole/lhw/transport"
 )
 
 func TestOptions(t *testing.T) {

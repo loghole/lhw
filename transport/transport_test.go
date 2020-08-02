@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gadavy/lhw/internal"
+	"github.com/loghole/lhw/internal"
 )
 
 func TestNew(t *testing.T) {
