@@ -100,7 +100,7 @@ func BenchmarkNewQueue(b *testing.B) {
 		queue := NewQueue(b.N)
 
 		for i := 0; i < b.N; i++ {
-			queue.Push([]byte{})
+			_ = queue.Push([]byte{})
 		}
 	})
 
@@ -119,7 +119,7 @@ func BenchmarkNewQueue(b *testing.B) {
 
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				queue.Push([]byte{})
+				_ = queue.Push([]byte{})
 			}
 		})
 	})
