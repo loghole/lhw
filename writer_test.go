@@ -37,7 +37,7 @@ func TestWriter_Write(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedN:   0,
-			expectedErr: "write data to queue failed: is full",
+			expectedErr: "[loghole-writer] write data to queue failed: is full",
 		},
 		{
 			name: "ErrorQueueIsClosed",
@@ -49,7 +49,7 @@ func TestWriter_Write(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedN:   0,
-			expectedErr: "write data to queue failed: is closed",
+			expectedErr: "[loghole-writer] write data to queue failed: is closed",
 		},
 	}
 	for _, tt := range tests {

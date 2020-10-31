@@ -3,7 +3,7 @@ GO_TEST_PACKAGES = $(shell go list ./...)
 gotest:
 	go test -race -v -cover -coverprofile coverage.out $(GO_TEST_PACKAGES)
 
-golint:
+lint:
 	golangci-lint run -v
 
 download_linter:

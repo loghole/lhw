@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrWriteFailed = errors.New("write data to queue failed")
+	ErrWriteFailed = errors.New("[loghole-writer] write data to queue failed")
 )
 
 // The url can contain secret token e.g. https://secret_token@localhost:50000
