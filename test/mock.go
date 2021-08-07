@@ -10,6 +10,7 @@ type StubTransport struct {
 
 func (m *StubTransport) Send(body []byte) error {
 	atomic.AddInt64(&m.Counter, 1)
+
 	return nil
 }
 

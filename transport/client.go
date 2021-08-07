@@ -39,13 +39,13 @@ type NodeClient struct {
 }
 
 // NewNodeClient create log hole node client.
-func NewNodeClient(url string, transport *http.Transport) (*NodeClient, error) {
+func NewNodeClient(dsn string, transport http.RoundTripper) (*NodeClient, error) {
 	client := &NodeClient{
 		status: isLive,
 		client: &http.Client{Transport: transport},
 	}
 
-	if err := client.parseURL(url); err != nil {
+	if err := client.parseURL(dsn); err != nil {
 		return nil, err
 	}
 

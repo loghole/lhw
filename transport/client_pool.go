@@ -12,6 +12,7 @@ const maxInt = int(^uint(0) >> 1)
 
 var (
 	ErrNoAvailableClients = errors.New("no available clients")
+	ErrNoAvailableServers = errors.New("no servers available for connection")
 )
 
 type ClientsPool interface {
@@ -28,12 +29,12 @@ func NewClientsPool(servers []string, insecure bool) (pool ClientsPool, err erro
 
 	if insecure {
 		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, // nolint:gosec // skip.
 		}
 	}
 
 	if len(servers) == 0 {
-		return nil, errors.New("no servers available for connection")
+		return nil, ErrNoAvailableServers
 	}
 
 	clients := make([]*NodeClient, len(servers))

@@ -10,16 +10,14 @@ import (
 	"github.com/loghole/lhw/transport"
 )
 
-var (
-	ErrWriteFailed = errors.New("[loghole-writer] write data to queue failed")
-)
+var ErrWriteFailed = errors.New("[loghole-writer] write data to queue failed")
 
 // The url can contain secret token e.g. https://secret_token@localhost:50000
 // Comma separated arrays are also supported, e.g. urlA, urlB.
 // Options start with the defaults but can be overridden.
 func NewWriter(url string, options ...Option) (writer *Writer, err error) {
 	opts := GetDefaultOptions()
-	opts.Servers = processUrlString(url)
+	opts.Servers = processURLString(url)
 
 	for _, option := range options {
 		if option == nil {
@@ -42,6 +40,7 @@ func NewWriter(url string, options ...Option) (writer *Writer, err error) {
 	}
 
 	writer.wg.Add(1)
+
 	go writer.worker()
 
 	return writer, nil
@@ -86,6 +85,7 @@ func (w *Writer) worker() {
 		}
 
 		w.wg.Add(1)
+
 		go w.send(data)
 	}
 }
@@ -113,7 +113,7 @@ func (w *Writer) send(data []byte) {
 	}
 }
 
-func processUrlString(url string) []string {
+func processURLString(url string) []string {
 	urls := strings.Split(url, ",")
 
 	for idx, val := range urls {

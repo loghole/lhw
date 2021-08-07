@@ -105,6 +105,7 @@ func (t *httpTransport) pingDeadNodes() {
 		client, err = t.clientsPool.NextDead()
 		if err != nil {
 			<-t.deadSignal
+
 			continue
 		}
 
