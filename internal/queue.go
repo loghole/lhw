@@ -18,9 +18,9 @@ type Queue struct {
 	closed bool
 }
 
-func NewQueue(cap int) *Queue {
+func NewQueue(capacity int) *Queue {
 	return &Queue{
-		ch: make(chan []byte, cap),
+		ch: make(chan []byte, capacity),
 	}
 }
 
@@ -28,17 +28,21 @@ func (q *Queue) Push(data []byte) error {
 	q.mu.RLock()
 	if q.closed {
 		q.mu.RUnlock()
+
 		return ErrIsClosed
 	}
+
 	q.wg.Add(1)
 	q.mu.RUnlock()
 
 	select {
 	case q.ch <- data:
 		q.wg.Done()
+
 		return nil
 	default:
 		q.wg.Done()
+
 		return ErrIsFull
 	}
 }

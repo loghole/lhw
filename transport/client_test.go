@@ -53,6 +53,7 @@ func TestNodeClient_LastUseTime(t *testing.T) {
 func TestNodeClient_PingRequest(t *testing.T) {
 	ts := httptest.NewUnstartedServer(nil)
 	ts.EnableHTTP2 = true
+
 	ts.StartTLS()
 	defer ts.Close()
 
@@ -116,6 +117,7 @@ func TestNodeClient_PingRequest(t *testing.T) {
 func TestNodeClient_SendRequest(t *testing.T) {
 	ts := httptest.NewUnstartedServer(nil)
 	ts.EnableHTTP2 = true
+
 	ts.StartTLS()
 	defer ts.Close()
 

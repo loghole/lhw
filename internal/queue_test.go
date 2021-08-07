@@ -63,6 +63,7 @@ func TestQueueRace(t *testing.T) {
 	)
 
 	wg.Add(3)
+
 	go writer(wg, queue, &counter)
 	go writer(wg, queue, &counter)
 	go reader(wg, queue, &counter)

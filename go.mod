@@ -1,8 +1,8 @@
 module github.com/loghole/lhw
 
-go 1.14
+go 1.16
 
 require (
-	github.com/stretchr/testify v1.4.0
-	go.uber.org/zap v1.15.0
+	github.com/stretchr/testify v1.7.0
+	go.uber.org/zap v1.18.1
 )
