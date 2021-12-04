@@ -44,20 +44,24 @@ func WithField(key string, value interface{}) Option {
 
 type Logger struct {
 	*zap.SugaredLogger
+
+	level  zap.AtomicLevel
 	closer io.Closer
 }
 
 func NewLogger(config *Config, options ...Option) (*Logger, error) {
-	logger := &Logger{}
+	logger := &Logger{
+		level: zap.NewAtomicLevelAt(zapLevel(config.Level)),
+	}
 
 	cores := make([]zapcore.Core, 0)
 
 	if !config.DisableStdout {
-		cores = append(cores, consoleCore(config))
+		cores = append(cores, logger.initConsoleCore())
 	}
 
 	if config.CollectorURL != "" {
-		core, closer, err := lhwCore(config)
+		core, closer, err := logger.initLhwCore(config)
 		if err != nil {
 			return nil, err
 		}
@@ -82,32 +86,21 @@ func NewLogger(config *Config, options ...Option) (*Logger, error) {
 	return logger, nil
 }
 
+func (l *Logger) SetLevel(lvl string) {
+	l.level.SetLevel(zapLevel(lvl))
+}
+
 func (l *Logger) Close() {
 	if l.closer != nil {
 		_ = l.closer.Close()
 	}
 }
 
-func zapLevel(lvl string) zapcore.Level {
-	switch strings.ToLower(lvl) {
-	case "debug":
-		return zap.DebugLevel
-	case "info":
-		return zap.InfoLevel
-	case "warn", "warning":
-		return zap.WarnLevel
-	case "err", "error":
-		return zap.ErrorLevel
-	default:
-		return zap.InfoLevel
-	}
+func (l *Logger) initConsoleCore() zapcore.Core {
+	return zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig()), os.Stdout, l.level)
 }
 
-func consoleCore(config *Config) zapcore.Core {
-	return zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig()), os.Stdout, zapLevel(config.Level))
-}
-
-func lhwCore(config *Config) (zapcore.Core, io.Closer, error) {
+func (l *Logger) initLhwCore(config *Config) (zapcore.Core, io.Closer, error) {
 	writer, err := lhw.NewWriter(config.CollectorURL)
 	if err != nil {
 		return nil, nil, err
@@ -131,9 +124,24 @@ func lhwCore(config *Config) (zapcore.Core, io.Closer, error) {
 		fields = append(fields, zap.String("config_hash", config.ConfigHash))
 	}
 
-	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig()), zapcore.AddSync(writer), zapLevel(config.Level))
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig()), zapcore.AddSync(writer), l.level)
 
 	return core.With(fields), writer, nil
+}
+
+func zapLevel(lvl string) zapcore.Level {
+	switch strings.ToLower(lvl) {
+	case "debug":
+		return zap.DebugLevel
+	case "info":
+		return zap.InfoLevel
+	case "warn", "warning":
+		return zap.WarnLevel
+	case "err", "error":
+		return zap.ErrorLevel
+	default:
+		return zap.InfoLevel
+	}
 }
 
 func encoderConfig() zapcore.EncoderConfig {

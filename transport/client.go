@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -106,7 +105,7 @@ func (c *NodeClient) parseURL(addr string) (err error) {
 		return err
 	}
 
-	c.token = strings.Join([]string{"Bearer", parsed.User.String()}, " ")
+	c.token = "Bearer" + " " + parsed.User.String()
 
 	// Drop user info
 	parsed.User = nil
